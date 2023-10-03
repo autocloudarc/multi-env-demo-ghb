@@ -1,0 +1,70 @@
+# Pipeline to demonstrate multi-stage, multi-environment activities 
+name: $(Build.DefinitionName)-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+
+# Macro syntax variable is processed before a task runs
+variables:
+- name: system.debug
+  value: true
+
+stages:
+  - stage: build
+    jobs: 
+      - job: 'build'
+        displayName: 'build'
+        timeoutInMinutes: 10
+        continueOnError: true
+        cancelTimeoutInMinutes: 5
+        pool:
+          vmImage: 'ubuntu-latest'
+
+        steps: 
+        - checkout: self
+          displayName: 'Checkout'
+          fetchDepth: 0
+          # https://stackoverflow.com/questions/59508121/no-url-found-for-submodule-path-in-gitmodules-error-in-azure-devops-build
+          submodules: true
+          lfs: true 
+          persistCredentials: true
+
+        - task: Bash@3
+          inputs:
+            targetType: inline
+            script: echo "build stage demo - no environment to deploy to"
+  - stage: dev
+    dependsOn: build
+    condition: succeeded('build')
+    jobs: 
+      - deployment: dev
+        continueOnError: false
+        environment: dev
+        timeoutInMinutes: 10
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: Bash@3
+                  inputs:
+                    targetType: inline
+                    script: echo "dev stage demo - dev envrionment"
+  - stage: prd
+    dependsOn: dev
+    condition: succeeded('dev')
+    jobs: 
+      - deployment: prd
+        continueOnError: false
+        environment: prd
+        timeoutInMinutes: 10
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: Bash@3
+                  inputs:
+                    targetType: inline
+                    script: echo "prd stage demo - prd envrionment"
