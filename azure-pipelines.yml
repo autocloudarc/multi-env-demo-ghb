@@ -1,4 +1,4 @@
-# Pipeline to demonstrate multi-stage, multi-environment activities 
+# Pipeline to demonstrate multi-stage, multi-environment activities.
 name: $(Build.DefinitionName)-$(Date:yyyyMMdd)$(Rev:.r)
 
 trigger:
